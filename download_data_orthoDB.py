@@ -58,13 +58,15 @@ def get_homo_5(driver, groupIndex):
 
 age_f = r"D:\GageTracker\result\GageTracker_r1_0.5.age.protein_coding"
 outpath = r'D:\GageTracker\data\orthoDB_2'
+fails = open("no_found", "w")
 
 age_data = pd.read_csv(age_f, sep="\t")
 genes = list(age_data["Gene"])
 option = webdriver.ChromeOptions()
 option.add_argument('headless')
 driver = webdriver.Chrome(chrome_options=option)
-# genes = ["FBgn0000055","FBgn0030522","FBgn0038525","FBgn0003162"]
+#genes = ["FBgn0250732","FBgn0000055","FBgn0030522","FBgn0038525","FBgn0003162"]
+#genes = ["FBgn0250732"]
 for i in genes:
     i = i.replace(".html", "")
     i_request = "https://www.orthodb.org/?query={0}&level=7214&species=7214".format(i)
@@ -80,6 +82,7 @@ for i in genes:
         res_xpath = '//*[@id="summary"]/div[1]'
         res = driver.find_element("xpath", res_xpath).text
         print("fail,", res + ",", i_request)
+        fails.write("fail," +  res + ", " + i_request, + "\n")
     else:
         # 找到一个group
         group_num = int(group_num)
@@ -87,10 +90,9 @@ for i in genes:
 
             # -- 搜不到xpat_wait以后的等待策略 #
             try:
-                print("div[6]", i)
                 xpat_wait = '//*[@id="group0"]/div[6]/div[2]/ul/li[1]/span/span[2]/span[1]'
-                tmp_content = driver.find_element("xpath",xpat_wait).text
-                WebDriverWait(driver, 30).until(EC.presence_of_element_located((By.XPATH, xpat_wait)))
+                WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.XPATH, xpat_wait)))
+                print("div[6]", i)
                 species2homo = get_homo(driver, 0)
                 OUT = open(os.path.join(outpath, i), "w")
                 json.dump(species2homo,OUT)
@@ -98,7 +100,7 @@ for i in genes:
             except Exception:
                 print("div[5]", i)
                 xpat_wait = '//*[@id="group0"]/div[5]/div[2]/ul/li[1]/span/span[2]/span[1]'
-                WebDriverWait(driver, 30).until(EC.presence_of_element_located((By.XPATH, xpat_wait)))
+                WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.XPATH, xpat_wait)))
                 species2homo = get_homo_5(driver, 0)
                 OUT = open(os.path.join(outpath, i), "w")
                 json.dump(species2homo,OUT)
@@ -126,3 +128,4 @@ for i in genes:
             OUT = open(os.path.join(outpath, i+"_g2"), "w")
             json.dump(species2homo_2,OUT)
             OUT.close()
+fails.close()
