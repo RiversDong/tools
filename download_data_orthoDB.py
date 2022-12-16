@@ -6,14 +6,20 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 import os
 import json
+import time
 
 def get_homo(driver, groupIndex):
     # --展开第一个group--#
     species2homo = {}
     g1_xpath = '//*[@id="group{0}"]/div[6]/div[2]/ul/li[1]/div/ul'.format(groupIndex)
+    
+    #{ 加上一个关于这个g1_xpath的时间等待
+    WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, g1_xpath)))
+    #}
     g1_content = driver.find_element("xpath",g1_xpath).text
     g1_content = g1_content.split("\n")
     g1_content_len = 0
+    
     for item in g1_content:
         if "Drosophila" in item:
             g1_content_len = g1_content_len + 1
@@ -28,15 +34,22 @@ def get_homo(driver, groupIndex):
         species = "Drosophila " + item_list[0].split(", ")[0]
         homogenes = item_list[1:]
         species2homo[species] = homogenes
-    #print(species2homo)
     return species2homo
-    # --展开第一个group--#
+    
     
 def get_homo_5(driver, groupIndex):
-    # --展开第一个group--#
     species2homo = {}
-    g1_xpath = '//*[@id="group{0}"]/div[5]/div[2]/ul/li[1]/div/ul'.format(groupIndex)
-    g1_content = driver.find_element("xpath",g1_xpath).text
+    # -- 找不到g1_xpath时使用异常处理 -- #
+    try:
+        g1_xpath = '//*[@id="group{0}"]/div[5]/div[2]/ul/li[1]/div/ul'.format(groupIndex)
+        WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, g1_xpath)))
+        g1_content = driver.find_element("xpath",g1_xpath).text
+    except Exception:
+        g1_xpath = '//*[@id="group{0}"]/div[6]/div[2]/ul/li[1]/div/ul'.format(groupIndex)
+        WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, g1_xpath)))
+        g1_content = driver.find_element("xpath",g1_xpath).text
+    # -- 找不到g1_xpath时使用异常处理 -- #
+ 
     g1_content = g1_content.split("\n")
     g1_content_len = 0
     for item in g1_content:
@@ -65,13 +78,19 @@ genes = list(age_data["Gene"])
 option = webdriver.ChromeOptions()
 option.add_argument('headless')
 driver = webdriver.Chrome(chrome_options=option)
-#genes = ["FBgn0250732","FBgn0000055","FBgn0030522","FBgn0038525","FBgn0003162"]
-#genes = ["FBgn0250732"]
+
+# -- 不包括的--
+tmp_genes = os.listdir(r'D:\GageTracker\data\orthoDB_2')
+remainings = set(genes).difference(set(tmp_genes))
+genes = list(remainings)
+print(len(genes))
+# -- 不包括的 -- 
+
 for i in genes:
     i = i.replace(".html", "")
     i_request = "https://www.orthodb.org/?query={0}&level=7214&species=7214".format(i)
     driver.get(i_request)
-
+    print(i, i_request)
     # 计算一下找到几个同源簇
     xpath = '//*[@id="summary"]/div[1]'
     WebDriverWait(driver, 30).until(EC.presence_of_element_located((By.XPATH, xpath)))
@@ -81,35 +100,30 @@ for i in genes:
         # 没有找到结果
         res_xpath = '//*[@id="summary"]/div[1]'
         res = driver.find_element("xpath", res_xpath).text
-        print("fail,", res + ",", i_request)
-        fails.write("fail," +  res + ", " + i_request, + "\n")
+        fails.write("not found," +  i_request + "\n")
     else:
         # 找到一个group
         group_num = int(group_num)
         if group_num == 1:
-
-            # -- 搜不到xpat_wait以后的等待策略 #
+            # {-- 搜不到xpat_wait以后的等待策略 #
             try:
                 xpat_wait = '//*[@id="group0"]/div[6]/div[2]/ul/li[1]/span/span[2]/span[1]'
                 WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.XPATH, xpat_wait)))
-                print("div[6]", i)
                 species2homo = get_homo(driver, 0)
                 OUT = open(os.path.join(outpath, i), "w")
                 json.dump(species2homo,OUT)
                 OUT.close()
             except Exception:
-                print("div[5]", i)
                 xpat_wait = '//*[@id="group0"]/div[5]/div[2]/ul/li[1]/span/span[2]/span[1]'
                 WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.XPATH, xpat_wait)))
                 species2homo = get_homo_5(driver, 0)
                 OUT = open(os.path.join(outpath, i), "w")
                 json.dump(species2homo,OUT)
                 OUT.close()
-            # -- 搜不到xpat_wait以后的等待策略 #
+            #}
 
         else:
             # 找到两个group
-            print("two group", i)
             js = 'document.querySelector("#group0 > div > div.s-group-header-arrow.s-group-header-arrow-right > a").click()'
             driver.execute_script(js)
             js = 'document.querySelector("#group1 > div > div.s-group-header-arrow.s-group-header-arrow-right > a").click()'
@@ -118,14 +132,26 @@ for i in genes:
             WebDriverWait(driver, 30).until(EC.presence_of_element_located((By.XPATH, xpat_wait)))
             xpath_wait = '//*[@id="group1"]/div[6]/div[2]/ul/li/span/span[2]/span[1]'
             WebDriverWait(driver, 30).until(EC.presence_of_element_located((By.XPATH, xpat_wait)))
-            species2homo_1 = get_homo(driver, 0) #展开第一个group
-            
+            species2homo_1 = get_homo(driver, 0)
             OUT = open(os.path.join(outpath, i+"_g1"), "w")
             json.dump(species2homo_1,OUT)
             OUT.close()
-            
-            species2homo_2 = get_homo(driver, 1) #展开第二个group
-            OUT = open(os.path.join(outpath, i+"_g2"), "w")
-            json.dump(species2homo_2,OUT)
-            OUT.close()
+
+            # {-- 展开第二个group --#
+            try:
+                xpath_wait = '//*[@id="group1"]/div[6]/div[2]/ul/li/span/span[2]/span[1]'
+                WebDriverWait(driver, 30).until(EC.presence_of_element_located((By.XPATH, xpat_wait)))
+                species2homo_2 = get_homo(driver, 1) #展开第二个group
+                OUT = open(os.path.join(outpath, i+"_g2"), "w")
+                json.dump(species2homo_2,OUT)
+                OUT.close()
+            except Exception:
+                xpath_wait = '//*[@id="group1"]/div[5]/div[2]/ul/li/span/span[2]/span[1]'
+                WebDriverWait(driver, 30).until(EC.presence_of_element_located((By.XPATH, xpat_wait)))
+                species2homo_2 = get_homo_5(driver, 1) #展开第二个group
+                OUT = open(os.path.join(outpath, i+"_g2"), "w")
+                json.dump(species2homo_2,OUT)
+                OUT.close()
+            # }
+                
 fails.close()
