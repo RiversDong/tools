@@ -1,0 +1,32 @@
+#!/usr/bin/env python3
+
+import os
+import sys
+
+'''
+version 1.0
+'''
+
+argvs = sys.argv
+
+for i in range(len(argvs)):
+    if argvs[i] == "-query":
+        query_path = argvs[i+1]
+    if argvs[i] == "-output":
+        out_path = argvs[i+1]
+    if argvs[i] == "-tmp":
+        tmp_path = argvs[i+1]
+
+queries = os.listdir(query_path)
+for i in queries:
+    iout = os.path.join(out_path, i)
+    iin = os.path.join(query_path, i)
+    try:
+        print("Detect the MGE elements in {0}......".format(i))
+        cmd = "mefinder find --temp-dir {0}  --contig {1} {2} > /dev/null 2>&1".format(tmp_path, iin, iout)
+        os.system(cmd)
+        print("Done\n")
+    except Exception:
+        print("error when detecting {0}".format(i))
+
+
