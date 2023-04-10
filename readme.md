@@ -10,8 +10,8 @@
 2. 安装blast,并放到环境变量
 ### 运行
 ```
-./MgeDetect -query /home/chuand/pks_dis/data/test -tmp /home/chuand/pks_dis/data/tmp/ -output /home/chuand/pks_dis/data/test_res/
+./MgeDetect_v1 -query /home/chuand/pks_dis/data/test -tmp /home/chuand/pks_dis/data/tmp/ -output /home/chuand/pks_dis/data/test_res/
 ```
--query 存放基因组的序列文件夹路径，比如这个路径下放了10个基因组，则会注释这10个基因组的MGEs，所以可以把所有的基因组放到一个文件夹里面
--tmp 临时文件的存放路径
--output会将所有的预测结果放到这个路径下面
+-query 存放基因组的序列文件夹路径，比如这个路径下放了10个基因组，则会注释这10个基因组的MGEs，所以可以把所有的基因组放到一个文件夹里面\
+-tmp 临时文件的存放路径\
+-output会将所有的预测结果放到这个路径下面\
